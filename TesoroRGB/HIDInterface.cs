@@ -3,6 +3,10 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using System.IO;
 
+#pragma warning disable 8618
+
+// ReSharper disable All
+
 namespace TesoroRGB
 {
     internal class HIDDevice

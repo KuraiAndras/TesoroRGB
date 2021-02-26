@@ -1,10 +1,14 @@
 ﻿using System;
-using System.Drawing; // for Image support
-using System.Threading; // for sleep
-using System.Diagnostics; // For stopwatch
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace TesoroRGB
 {
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "FalsePositive")]
     public enum TesoroProfile : byte
     {
         Profile1 = 0x01,
@@ -12,9 +16,11 @@ namespace TesoroRGB
         Profile3 = 0x03,
         Profile4 = 0x04,
         Profile5 = 0x05,
-        PC = 0x06
+        Pc = 0x06
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "FalsePositive")]
     public enum LightingMode : byte
     {
         Shine = 0x00,
@@ -27,6 +33,8 @@ namespace TesoroRGB
         SpectrumColors = 0x08
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "FalsePositive")]
     public enum SpectrumMode : byte
     {
         SpectrumShine = 0x00,
@@ -34,7 +42,7 @@ namespace TesoroRGB
         SpectrumTrigger = 0x02
     }
 
-    public enum TesoroLedID : byte
+    public enum TesoroLedId : byte
     {
         Escape = 0x0B,
         F1 = 0x16,
@@ -144,12 +152,16 @@ namespace TesoroRGB
         None = 0xFF
     }
 
-    public class Keyboard
+    public sealed class Keyboard : IDisposable
     {
-        HIDDevice device;
-        public static int width = 22;
-        public static int height = 6;
-        TesoroLedID[,] keyPositions = new TesoroLedID[width, height];
+        private const string UninitializedMessage = "Keyboard is not initialized";
+
+        private static readonly TimeSpan WaitTime = TimeSpan.FromMilliseconds(100);
+
+        private HIDDevice? _device;
+        public static int Width = 22;
+        public static int Height = 6;
+        private readonly TesoroLedId[,] _keyPositions = new TesoroLedId[Width, Height];
 
         // Attempt to find and open communications with a Tesoro Keyboard
         // Returns true if successful, false if not
@@ -160,17 +172,18 @@ namespace TesoroRGB
         public bool Initialize()
         {
             //Get the details of all connected USB HID devices
-            HIDDevice.interfaceDetails[] devices = HIDDevice.getConnectedDevices();
+            var devices = HIDDevice.getConnectedDevices();
 
-            string devicePath = "";
+            var devicePath = "";
 
             // Loop through these to find our device
-            foreach (HIDDevice.interfaceDetails dev in devices)
+            foreach (var dev in devices)
             {
                 // check vendor ID to find tesoro devices
                 if (dev.devicePath.Contains("hid#vid_195d"))
                 {
                     // find this particular device - Tested on Gram Spectrum Only!
+                    // Tested on Excalibur Spectrum
                     // TODO: find a cleaner way to find Tesoro Keyboards
                     if (dev.devicePath.Contains("&mi_01&col05"))
                     {
@@ -190,7 +203,7 @@ namespace TesoroRGB
             SetKeyPositions();
 
             //open the device
-            device = new HIDDevice(devicePath);
+            _device = new HIDDevice(devicePath);
             // report success
             return true;
         }
@@ -198,10 +211,12 @@ namespace TesoroRGB
         /// <summary>
         /// Close communications with the USB device.
         /// </summary>
-        public void Uninitialize()
+        public void UnInitialize()
         {
-            if (device.deviceConnected) device.close();
+            if (_device?.deviceConnected == true) _device.close();
         }
+
+        public void Dispose() => UnInitialize();
 
         /// <summary>
         /// Set the keyboard to display the designated profile
@@ -209,11 +224,20 @@ namespace TesoroRGB
         /// <param name="profile">The profile to change to.</param>
         public void SetProfile(TesoroProfile profile)
         {
+            if (_device is null) throw new InvalidOperationException(UninitializedMessage);
+
             // Prepare the command data
             byte[] data = { 0x07, 0x03, (byte)profile, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
             // Send the data
-            device.writeFeature(data);
+            _device.writeFeature(data);
+        }
+
+        public async Task SetProfileAsync(TesoroProfile profile)
+        {
+            SetProfile(profile);
+
+            await Task.Delay(WaitTime).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -221,10 +245,7 @@ namespace TesoroRGB
         /// </summary>
         /// <param name="mode">Lighting mode</param>
         /// <param name="profile">The profile to modify.</param>
-        public void SetLightingMode(LightingMode mode, TesoroProfile profile)
-        {
-            SetLightingMode(mode, 0x00, profile);
-        }
+        public void SetLightingMode(LightingMode mode, TesoroProfile profile) => SetLightingMode(mode, 0x00, profile);
 
         /// <summary>
         /// Sets the main background Color for standard effects
@@ -234,11 +255,20 @@ namespace TesoroRGB
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
         public void SetLightingMode(LightingMode mode, SpectrumMode spectrumMode, TesoroProfile profile)
         {
+            if (_device is null) throw new InvalidOperationException(UninitializedMessage);
+
             // Prepare the command data
             byte[] data = { 0x07, 0x0A, (byte)profile, (byte)mode, (byte)spectrumMode, 0x00, 0x00, 0x00 };
 
             // Send the data
-            device.writeFeature(data);
+            _device.writeFeature(data);
+        }
+
+        public async Task SetLightingModeAsync(LightingMode mode, SpectrumMode spectrumMode, TesoroProfile profile)
+        {
+            SetLightingMode(mode, spectrumMode, profile);
+
+            await Task.Delay(WaitTime).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -250,11 +280,13 @@ namespace TesoroRGB
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
         public void SetProfileColor(int r, int g, int b, TesoroProfile profile)
         {
+            if (_device is null) throw new InvalidOperationException(UninitializedMessage);
+
             // Prepare the command data
             byte[] data = { 0x07, 0x0B, (byte)profile, IntToByte(r), IntToByte(g), IntToByte(b), 0x00, 0x00 };
 
             // Send the data
-            device.writeFeature(data);
+            _device.writeFeature(data);
         }
 
         /// <summary>
@@ -265,15 +297,49 @@ namespace TesoroRGB
         /// <param name="g">Green exponent 0-255</param>
         /// <param name="b">Blue exponent 0-255</param>
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
-        public void SetKeyColor(TesoroLedID key, int r, int g, int b, TesoroProfile profile)
+        public void SetKeyColor(TesoroLedId key, int r, int g, int b, TesoroProfile profile)
         {
-            if (key == TesoroLedID.None) return;
+            if (_device is null) throw new InvalidOperationException(UninitializedMessage);
+
+            if (key == TesoroLedId.None) return;
 
             // Prepare the command data
             byte[] data = { 0x07, 0x0D, (byte)profile, (byte)key, IntToByte(r), IntToByte(g), IntToByte(b), 0x00 };
 
             // Send the data
-            device.writeFeature(data);
+            _device.writeFeature(data);
+        }
+
+        /// <summary>
+        /// Sets the LED of a single key using 0-255 integers.
+        /// </summary>
+        /// <param name="key">Key</param>
+        /// <param name="r">Red exponent 0-255</param>
+        /// <param name="g">Green exponent 0-255</param>
+        /// <param name="b">Blue exponent 0-255</param>
+        /// <param name="profile">The profile to modify. This should be the active profile.</param>
+        /// /// <param name="cancellationToken">Cancellation token</param>
+        public async Task SetKeyColorAsync(TesoroLedId key, int r, int g, int b, TesoroProfile profile, CancellationToken cancellationToken = default)
+        {
+            SetKeyColor(key, r, g, b, profile);
+
+            await Task.Delay(WaitTime, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Sets the LED of a single key using 0-255 integers.
+        /// </summary>
+        /// <param name="key">Key in integer. Should be between 0 and 255 inclusive</param>
+        /// <param name="r">Red exponent 0-255</param>
+        /// <param name="g">Green exponent 0-255</param>
+        /// <param name="b">Blue exponent 0-255</param>
+        /// <param name="profile">The profile to modify. This should be the active profile.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        public async Task SetKeyColorAsync(int key, int r, int g, int b, TesoroProfile profile, CancellationToken cancellationToken = default)
+        {
+            SetKeyColor((TesoroLedId)Convert.ToByte(key), r, g, b, profile);
+
+            await Task.Delay(WaitTime, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -281,19 +347,19 @@ namespace TesoroRGB
         /// </summary>
         /// <param name="bitmap">A Bitmap object describing the desired pattern.</param>
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
-        /// <param name="fast">True - speeds up execution at the risk of missed pixels. Recomended true for animated effects, false for static effects.</param>
-        void SetKeysColor(Bitmap bitmap, TesoroProfile profile, bool fast)
+        /// <param name="fast">True - speeds up execution at the risk of missed pixels. Recommended true for animated effects, false for static effects.</param>
+        private void SetKeysColor(Bitmap bitmap, TesoroProfile profile, bool fast)
         {
-            if (bitmap.Width > width || bitmap.Height > height) bitmap = new Bitmap(bitmap, width, height);
-            for (int x = 0; x < width; x++)
+            if (bitmap.Width > Width || bitmap.Height > Height) bitmap = new Bitmap(bitmap, Width, Height);
+            for (var x = 0; x < Width; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (var y = 0; y < Height; y++)
                 {
                     // get pixel (using tiling for small bitmaps)
-                    Color col = bitmap.GetPixel(x, y);
+                    var col = bitmap.GetPixel(x, y);
 
                     // set Color
-                    SetKeyColor(keyPositions[x, y], col.R, col.G, col.B, profile);
+                    SetKeyColor(_keyPositions[x, y], col.R, col.G, col.B, profile);
                     // delay between sends
                     Wait(fast);
                 }
@@ -305,10 +371,10 @@ namespace TesoroRGB
         /// </summary>
         /// <param name="file">Path to an image file describing the desired pattern.</param>
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
-        /// <param name="fast">True - speeds up execution at the risk of missed pixels. Recomended true for animated effects, false for static effects.</param>
+        /// <param name="fast">True - speeds up execution at the risk of missed pixels. Recommended true for animated effects, false for static effects.</param>
         public void SetKeysColor(string file, TesoroProfile profile, bool fast)
         {
-            Image image = Image.FromFile(file);
+            var image = Image.FromFile(file);
 
             SetKeysColor(new Bitmap(image), profile, fast);
         }
@@ -319,11 +385,13 @@ namespace TesoroRGB
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
         public void ClearSpectrumColors(TesoroProfile profile)
         {
+            if (_device is null) throw new InvalidOperationException(UninitializedMessage);
+
             // Prepare the command data
             byte[] data = { 0x07, 0x0D, (byte)profile, 0xFE, 0x00, 0x00, 0x00, 0x00 };
 
             // Send the data
-            device.writeFeature(data);
+            _device.writeFeature(data);
         }
 
         /// <summary>
@@ -333,174 +401,185 @@ namespace TesoroRGB
         /// <param name="profile">The profile to save. This should be the active profile.</param>
         public void SaveSpectrumColors(TesoroProfile profile)
         {
+            if (_device is null) throw new InvalidOperationException(UninitializedMessage);
+
             // Prepare the command data
             byte[] data = { 0x07, 0x0D, (byte)profile, 0xFF, 0x00, 0x00, 0x00, 0x00 };
 
             // Send the data
-            device.writeFeature(data);
+            _device.writeFeature(data);
+        }
+
+        public async Task SaveSpectrumColorsAsync(TesoroProfile profile)
+        {
+            SaveSpectrumColors(profile);
+
+            await Task.Delay(WaitTime).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Perform a short wait. For use in between successive calls.
         /// </summary>
         /// <param name="fast">True - Shorter delay for use in animation effect. When keys are set with fast delay, some leds may not be set. False - Longer delay for safely assigning</param>
-        void Wait(bool fast)
+        private static void Wait(bool fast)
         {
             if (fast)
             {
-                Stopwatch watch = new Stopwatch();
+                var watch = new Stopwatch();
                 watch.Start();
-                while (watch.Elapsed.TotalMilliseconds < 0.8) { } // waiting for .8ms
+                while (watch.Elapsed.TotalMilliseconds < 0.8)
+                {
+                    // waiting for .8ms
+                }
             }
             else
             {
                 Thread.Sleep(1);
             }
         }
-        
+
         /// <summary>
-        /// Initialises the key positions array.
+        /// Initializes the key positions array.
         /// </summary>
-        void SetKeyPositions()
+        private void SetKeyPositions()
         {
-            for (int x = 0; x < width; x++)
+            for (var x = 0; x < Width; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (var y = 0; y < Height; y++)
                 {
-                    SetKeyPosition(TesoroLedID.None, x, y);
+                    SetKeyPosition(TesoroLedId.None, x, y);
                 }
             }
+
             // Row 1
-            SetKeyPosition(TesoroLedID.Escape, 0, 0);
-            SetKeyPosition(TesoroLedID.F1, 2, 0);
-            SetKeyPosition(TesoroLedID.F2, 3, 0);
-            SetKeyPosition(TesoroLedID.F3, 4, 0);
-            SetKeyPosition(TesoroLedID.F4, 5, 0);
-            SetKeyPosition(TesoroLedID.F5, 6, 0);
-            SetKeyPosition(TesoroLedID.F6, 7, 0);
-            SetKeyPosition(TesoroLedID.F7, 8, 0);
-            SetKeyPosition(TesoroLedID.F8, 9, 0);
-            SetKeyPosition(TesoroLedID.F9, 11, 0);
-            SetKeyPosition(TesoroLedID.F10, 12, 0);
-            SetKeyPosition(TesoroLedID.F11, 13, 0);
-            SetKeyPosition(TesoroLedID.F12, 14, 0);
-            SetKeyPosition(TesoroLedID.PrintScreen, 15, 0);
-            SetKeyPosition(TesoroLedID.ScrollLock, 16, 0);
-            SetKeyPosition(TesoroLedID.Pause, 17, 0);
+            SetKeyPosition(TesoroLedId.Escape, 0, 0);
+            SetKeyPosition(TesoroLedId.F1, 2, 0);
+            SetKeyPosition(TesoroLedId.F2, 3, 0);
+            SetKeyPosition(TesoroLedId.F3, 4, 0);
+            SetKeyPosition(TesoroLedId.F4, 5, 0);
+            SetKeyPosition(TesoroLedId.F5, 6, 0);
+            SetKeyPosition(TesoroLedId.F6, 7, 0);
+            SetKeyPosition(TesoroLedId.F7, 8, 0);
+            SetKeyPosition(TesoroLedId.F8, 9, 0);
+            SetKeyPosition(TesoroLedId.F9, 11, 0);
+            SetKeyPosition(TesoroLedId.F10, 12, 0);
+            SetKeyPosition(TesoroLedId.F11, 13, 0);
+            SetKeyPosition(TesoroLedId.F12, 14, 0);
+            SetKeyPosition(TesoroLedId.PrintScreen, 15, 0);
+            SetKeyPosition(TesoroLedId.ScrollLock, 16, 0);
+            SetKeyPosition(TesoroLedId.Pause, 17, 0);
 
             // Row 2
-            SetKeyPosition(TesoroLedID.Oemtilde, 0, 1);
-            SetKeyPosition(TesoroLedID.D1, 1, 1);
-            SetKeyPosition(TesoroLedID.D2, 2, 1);
-            SetKeyPosition(TesoroLedID.D3, 3, 1);
-            SetKeyPosition(TesoroLedID.D4, 4, 1);
-            SetKeyPosition(TesoroLedID.D5, 5, 1);
-            SetKeyPosition(TesoroLedID.D6, 6, 1);
-            SetKeyPosition(TesoroLedID.D7, 7, 1);
-            SetKeyPosition(TesoroLedID.D8, 8, 1);
-            SetKeyPosition(TesoroLedID.D9, 9, 1);
-            SetKeyPosition(TesoroLedID.D0, 10, 1);
-            SetKeyPosition(TesoroLedID.OemMinus, 11, 1);
-            SetKeyPosition(TesoroLedID.OemPlus, 12, 1);
-            SetKeyPosition(TesoroLedID.Back, 13, 1);
-            SetKeyPosition(TesoroLedID.Insert, 15, 1);
-            SetKeyPosition(TesoroLedID.Home, 16, 1);
-            SetKeyPosition(TesoroLedID.PageUp, 17, 1);
-            SetKeyPosition(TesoroLedID.NumLock, 18, 1);
-            SetKeyPosition(TesoroLedID.Divide, 19, 1);
-            SetKeyPosition(TesoroLedID.Multiply, 20, 1);
-            SetKeyPosition(TesoroLedID.Subtract, 21, 1);
+            SetKeyPosition(TesoroLedId.Oemtilde, 0, 1);
+            SetKeyPosition(TesoroLedId.D1, 1, 1);
+            SetKeyPosition(TesoroLedId.D2, 2, 1);
+            SetKeyPosition(TesoroLedId.D3, 3, 1);
+            SetKeyPosition(TesoroLedId.D4, 4, 1);
+            SetKeyPosition(TesoroLedId.D5, 5, 1);
+            SetKeyPosition(TesoroLedId.D6, 6, 1);
+            SetKeyPosition(TesoroLedId.D7, 7, 1);
+            SetKeyPosition(TesoroLedId.D8, 8, 1);
+            SetKeyPosition(TesoroLedId.D9, 9, 1);
+            SetKeyPosition(TesoroLedId.D0, 10, 1);
+            SetKeyPosition(TesoroLedId.OemMinus, 11, 1);
+            SetKeyPosition(TesoroLedId.OemPlus, 12, 1);
+            SetKeyPosition(TesoroLedId.Back, 13, 1);
+            SetKeyPosition(TesoroLedId.Insert, 15, 1);
+            SetKeyPosition(TesoroLedId.Home, 16, 1);
+            SetKeyPosition(TesoroLedId.PageUp, 17, 1);
+            SetKeyPosition(TesoroLedId.NumLock, 18, 1);
+            SetKeyPosition(TesoroLedId.Divide, 19, 1);
+            SetKeyPosition(TesoroLedId.Multiply, 20, 1);
+            SetKeyPosition(TesoroLedId.Subtract, 21, 1);
 
             // Row 3
-            SetKeyPosition(TesoroLedID.Tab, 0, 2);
-            SetKeyPosition(TesoroLedID.Q, 1, 2);
-            SetKeyPosition(TesoroLedID.W, 2, 2);
-            SetKeyPosition(TesoroLedID.E, 3, 2);
-            SetKeyPosition(TesoroLedID.R, 5, 2);
-            SetKeyPosition(TesoroLedID.T, 6, 2);
-            SetKeyPosition(TesoroLedID.Y, 7, 2);
-            SetKeyPosition(TesoroLedID.U, 8, 2);
-            SetKeyPosition(TesoroLedID.I, 9, 2);
-            SetKeyPosition(TesoroLedID.O, 10, 2);
-            SetKeyPosition(TesoroLedID.P, 11, 2);
-            SetKeyPosition(TesoroLedID.OemOpenBrackets, 12, 2);
-            SetKeyPosition(TesoroLedID.OemCloseBrackets, 13, 2);
-            SetKeyPosition(TesoroLedID.OemPipe, 14, 2);
-            SetKeyPosition(TesoroLedID.Delete, 15, 2);
-            SetKeyPosition(TesoroLedID.End, 16, 2);
-            SetKeyPosition(TesoroLedID.PageDown, 17, 2);
-            SetKeyPosition(TesoroLedID.NumPad7, 18, 2);
-            SetKeyPosition(TesoroLedID.NumPad8, 19, 2);
-            SetKeyPosition(TesoroLedID.NumPad9, 20, 2);
-            SetKeyPosition(TesoroLedID.Add, 21, 2);
+            SetKeyPosition(TesoroLedId.Tab, 0, 2);
+            SetKeyPosition(TesoroLedId.Q, 1, 2);
+            SetKeyPosition(TesoroLedId.W, 2, 2);
+            SetKeyPosition(TesoroLedId.E, 3, 2);
+            SetKeyPosition(TesoroLedId.R, 5, 2);
+            SetKeyPosition(TesoroLedId.T, 6, 2);
+            SetKeyPosition(TesoroLedId.Y, 7, 2);
+            SetKeyPosition(TesoroLedId.U, 8, 2);
+            SetKeyPosition(TesoroLedId.I, 9, 2);
+            SetKeyPosition(TesoroLedId.O, 10, 2);
+            SetKeyPosition(TesoroLedId.P, 11, 2);
+            SetKeyPosition(TesoroLedId.OemOpenBrackets, 12, 2);
+            SetKeyPosition(TesoroLedId.OemCloseBrackets, 13, 2);
+            SetKeyPosition(TesoroLedId.OemPipe, 14, 2);
+            SetKeyPosition(TesoroLedId.Delete, 15, 2);
+            SetKeyPosition(TesoroLedId.End, 16, 2);
+            SetKeyPosition(TesoroLedId.PageDown, 17, 2);
+            SetKeyPosition(TesoroLedId.NumPad7, 18, 2);
+            SetKeyPosition(TesoroLedId.NumPad8, 19, 2);
+            SetKeyPosition(TesoroLedId.NumPad9, 20, 2);
+            SetKeyPosition(TesoroLedId.Add, 21, 2);
 
             // Row 4
-            SetKeyPosition(TesoroLedID.CapsLock, 0, 3);
-            SetKeyPosition(TesoroLedID.A, 1, 3);
-            SetKeyPosition(TesoroLedID.S, 3, 3);
-            SetKeyPosition(TesoroLedID.D, 4, 3);
-            SetKeyPosition(TesoroLedID.F, 5, 3);
-            SetKeyPosition(TesoroLedID.G, 6, 3);
-            SetKeyPosition(TesoroLedID.H, 7, 3);
-            SetKeyPosition(TesoroLedID.J, 8, 3);
-            SetKeyPosition(TesoroLedID.K, 9, 3);
-            SetKeyPosition(TesoroLedID.L, 10, 3);
-            SetKeyPosition(TesoroLedID.OemSemicolon, 11, 3);
-            SetKeyPosition(TesoroLedID.Apostrophe, 12, 3);
-            SetKeyPosition(TesoroLedID.Enter, 14, 3);
-            SetKeyPosition(TesoroLedID.NumPad4, 17, 3);
-            SetKeyPosition(TesoroLedID.NumPad5, 18, 3);
-            SetKeyPosition(TesoroLedID.NumPad6, 19, 3);
+            SetKeyPosition(TesoroLedId.CapsLock, 0, 3);
+            SetKeyPosition(TesoroLedId.A, 1, 3);
+            SetKeyPosition(TesoroLedId.S, 3, 3);
+            SetKeyPosition(TesoroLedId.D, 4, 3);
+            SetKeyPosition(TesoroLedId.F, 5, 3);
+            SetKeyPosition(TesoroLedId.G, 6, 3);
+            SetKeyPosition(TesoroLedId.H, 7, 3);
+            SetKeyPosition(TesoroLedId.J, 8, 3);
+            SetKeyPosition(TesoroLedId.K, 9, 3);
+            SetKeyPosition(TesoroLedId.L, 10, 3);
+            SetKeyPosition(TesoroLedId.OemSemicolon, 11, 3);
+            SetKeyPosition(TesoroLedId.Apostrophe, 12, 3);
+            SetKeyPosition(TesoroLedId.Enter, 14, 3);
+            SetKeyPosition(TesoroLedId.NumPad4, 17, 3);
+            SetKeyPosition(TesoroLedId.NumPad5, 18, 3);
+            SetKeyPosition(TesoroLedId.NumPad6, 19, 3);
 
             // Row 5
-            SetKeyPosition(TesoroLedID.LeftShift, 1, 4);
-            SetKeyPosition(TesoroLedID.Z, 2, 4);
-            SetKeyPosition(TesoroLedID.X, 3, 4);
-            SetKeyPosition(TesoroLedID.C, 4, 4);
-            SetKeyPosition(TesoroLedID.V, 5, 4);
-            SetKeyPosition(TesoroLedID.B, 6, 4);
-            SetKeyPosition(TesoroLedID.N, 7, 4);
-            SetKeyPosition(TesoroLedID.M, 8, 4);
-            SetKeyPosition(TesoroLedID.Comma, 9, 4);
-            SetKeyPosition(TesoroLedID.Period, 10, 4);
-            SetKeyPosition(TesoroLedID.Slash, 11, 4);
-            SetKeyPosition(TesoroLedID.RightShift, 13, 4);
-            SetKeyPosition(TesoroLedID.Up, 16, 4);
-            SetKeyPosition(TesoroLedID.NumPad1, 18, 4);
-            SetKeyPosition(TesoroLedID.NumPad2, 19, 4);
-            SetKeyPosition(TesoroLedID.NumPad3, 20, 4);
-            SetKeyPosition(TesoroLedID.NumPadEnter, 21, 4);
+            SetKeyPosition(TesoroLedId.LeftShift, 1, 4);
+            SetKeyPosition(TesoroLedId.Z, 2, 4);
+            SetKeyPosition(TesoroLedId.X, 3, 4);
+            SetKeyPosition(TesoroLedId.C, 4, 4);
+            SetKeyPosition(TesoroLedId.V, 5, 4);
+            SetKeyPosition(TesoroLedId.B, 6, 4);
+            SetKeyPosition(TesoroLedId.N, 7, 4);
+            SetKeyPosition(TesoroLedId.M, 8, 4);
+            SetKeyPosition(TesoroLedId.Comma, 9, 4);
+            SetKeyPosition(TesoroLedId.Period, 10, 4);
+            SetKeyPosition(TesoroLedId.Slash, 11, 4);
+            SetKeyPosition(TesoroLedId.RightShift, 13, 4);
+            SetKeyPosition(TesoroLedId.Up, 16, 4);
+            SetKeyPosition(TesoroLedId.NumPad1, 18, 4);
+            SetKeyPosition(TesoroLedId.NumPad2, 19, 4);
+            SetKeyPosition(TesoroLedId.NumPad3, 20, 4);
+            SetKeyPosition(TesoroLedId.NumPadEnter, 21, 4);
 
             // Row 6
-            SetKeyPosition(TesoroLedID.LeftControl, 0, 5);
-            SetKeyPosition(TesoroLedID.Windows, 1, 5);
-            SetKeyPosition(TesoroLedID.Alt, 3, 5);
-            SetKeyPosition(TesoroLedID.Space, 6, 5);
-            SetKeyPosition(TesoroLedID.AltGr, 11, 5);
-            SetKeyPosition(TesoroLedID.TesoroFn, 12, 5);
-            SetKeyPosition(TesoroLedID.Apps, 13, 5);
-            SetKeyPosition(TesoroLedID.RightControl, 14, 5);
-            SetKeyPosition(TesoroLedID.Left, 15, 5);
-            SetKeyPosition(TesoroLedID.Down, 16, 5);
-            SetKeyPosition(TesoroLedID.Right, 17, 5);
-            SetKeyPosition(TesoroLedID.NumPad0, 18, 5);
-            SetKeyPosition(TesoroLedID.Decimal, 20, 5);
+            SetKeyPosition(TesoroLedId.LeftControl, 0, 5);
+            SetKeyPosition(TesoroLedId.Windows, 1, 5);
+            SetKeyPosition(TesoroLedId.Alt, 3, 5);
+            SetKeyPosition(TesoroLedId.Space, 6, 5);
+            SetKeyPosition(TesoroLedId.AltGr, 11, 5);
+            SetKeyPosition(TesoroLedId.TesoroFn, 12, 5);
+            SetKeyPosition(TesoroLedId.Apps, 13, 5);
+            SetKeyPosition(TesoroLedId.RightControl, 14, 5);
+            SetKeyPosition(TesoroLedId.Left, 15, 5);
+            SetKeyPosition(TesoroLedId.Down, 16, 5);
+            SetKeyPosition(TesoroLedId.Right, 17, 5);
+            SetKeyPosition(TesoroLedId.NumPad0, 18, 5);
+            SetKeyPosition(TesoroLedId.Decimal, 20, 5);
         }
 
-        void SetKeyPosition(TesoroLedID key, int x, int y)
+        private void SetKeyPosition(TesoroLedId key, int x, int y)
         {
-            if ((x >= width) || (y >= height))
+            if ((x >= Width) || (y >= Height))
             {
                 // out of bounds
                 return;
             }
-            keyPositions[x, y] = key;
+
+            _keyPositions[x, y] = key;
         }
 
         // Returns the integer as a byte, truncates to one byte
-        byte IntToByte(int i)
-        {
-            return BitConverter.GetBytes(i % 256)[0];
-        }
+        private static byte IntToByte(int i) => BitConverter.GetBytes(i % 256)[0];
     }
 }
