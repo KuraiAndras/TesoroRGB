@@ -233,11 +233,11 @@ namespace TesoroRgb.Core
             _device.writeFeature(data);
         }
 
-        public async Task SetProfileAsync(TesoroProfile profile)
+        public async Task SetProfileAsync(TesoroProfile profile, TimeSpan? waitTime = null, CancellationToken cancellationToken = default)
         {
             SetProfile(profile);
 
-            await Task.Delay(WaitTime).ConfigureAwait(false);
+            await Task.Delay(waitTime ?? WaitTime, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -264,11 +264,11 @@ namespace TesoroRgb.Core
             _device.writeFeature(data);
         }
 
-        public async Task SetLightingModeAsync(LightingMode mode, SpectrumMode spectrumMode, TesoroProfile profile)
+        public async Task SetLightingModeAsync(LightingMode mode, SpectrumMode spectrumMode, TesoroProfile profile, TimeSpan? waitTime = null, CancellationToken cancellationToken = default)
         {
             SetLightingMode(mode, spectrumMode, profile);
 
-            await Task.Delay(WaitTime).ConfigureAwait(false);
+            await Task.Delay(waitTime ?? WaitTime, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -318,12 +318,13 @@ namespace TesoroRgb.Core
         /// <param name="g">Green exponent 0-255</param>
         /// <param name="b">Blue exponent 0-255</param>
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
-        /// /// <param name="cancellationToken">Cancellation token</param>
-        public async Task SetKeyColorAsync(TesoroLedId key, int r, int g, int b, TesoroProfile profile, CancellationToken cancellationToken = default)
+        /// <param name="waitTime">Wait for completion.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        public async Task SetKeyColorAsync(TesoroLedId key, int r, int g, int b, TesoroProfile profile, TimeSpan? waitTime = null, CancellationToken cancellationToken = default)
         {
             SetKeyColor(key, r, g, b, profile);
 
-            await Task.Delay(WaitTime, cancellationToken).ConfigureAwait(false);
+            await Task.Delay(waitTime ?? WaitTime, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -334,12 +335,13 @@ namespace TesoroRgb.Core
         /// <param name="g">Green exponent 0-255</param>
         /// <param name="b">Blue exponent 0-255</param>
         /// <param name="profile">The profile to modify. This should be the active profile.</param>
+        /// <param name="waitTime">Wait for completion.</param>
         /// <param name="cancellationToken">Cancellation token</param>
-        public async Task SetKeyColorAsync(int key, int r, int g, int b, TesoroProfile profile, CancellationToken cancellationToken = default)
+        public async Task SetKeyColorAsync(int key, int r, int g, int b, TesoroProfile profile, TimeSpan? waitTime = null, CancellationToken cancellationToken = default)
         {
             SetKeyColor((TesoroLedId)Convert.ToByte(key), r, g, b, profile);
 
-            await Task.Delay(WaitTime, cancellationToken).ConfigureAwait(false);
+            await Task.Delay(waitTime ?? WaitTime, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -410,11 +412,11 @@ namespace TesoroRgb.Core
             _device.writeFeature(data);
         }
 
-        public async Task SaveSpectrumColorsAsync(TesoroProfile profile)
+        public async Task SaveSpectrumColorsAsync(TesoroProfile profile, TimeSpan? waitTime = null, CancellationToken cancellationToken = default)
         {
             SaveSpectrumColors(profile);
 
-            await Task.Delay(WaitTime).ConfigureAwait(false);
+            await Task.Delay(waitTime ?? WaitTime, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
