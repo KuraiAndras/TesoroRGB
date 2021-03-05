@@ -1,4 +1,6 @@
-# TesoroRGB
+# Forked from https://github.com/rolopogo/TesoroRGB [![Nuget](https://img.shields.io/nuget/v/TesoroRgb.Core)](https://www.nuget.org/packages/TesoroRgb.Core/)
+
+# TesoroRGB 
 
 TesoroRGB is a Library for modifying the lighting profiles of Tesoro RGB Keyboards.
 
@@ -8,7 +10,7 @@ The following devices have been tested and confirmed to be compatible. If you ow
 - Tesoro Gram Spectrum
 
 ## Example
-```
+```csharp
 // Create Keyboard object
 Keyboard kb = new Keyboard();
 

@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TesoroRGB\TesoroRGB.csproj" />
+    <ProjectReference Include="..\TesoroRgb.Core\TesoroRgb.Core.csproj" />
   </ItemGroup>
 
 </Project>

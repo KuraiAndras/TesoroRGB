@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using TesoroRgb.Core;
 
 namespace TesoroRGB.Cli
 {
