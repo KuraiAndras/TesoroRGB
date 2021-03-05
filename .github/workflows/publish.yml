@@ -21,5 +21,5 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: pwsh
         run: |
-          dotnet pack TesoroRgb.Core/TesoroRgb.Core.csproj -c Release -p:Version=$env:GIT_TAG_NAME -p:PackageVersion=$env:GIT_TAG_NAME
-          dotnet nuget push "*.nupkg" -k $env:NUGET_API_KEY -s https://api.nuget.org/v3/index.json
+          dotnet pack "TesoroRgb.Core/TesoroRgb.Core.csproj" -c Release -p:Version=$env:GIT_TAG_NAME -p:PackageVersion=$env:GIT_TAG_NAME
+          dotnet nuget push "TesoroRgb.Core/TesoroRgb.Core/bin/Release/TesoroRgb.Core.${env:GIT_TAG_NAME}.nupkg" -k $env:NUGET_API_KEY -s https://api.nuget.org/v3/index.json
