@@ -1,0 +1,25 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  Publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: Get Current Tag
+        uses: olegtarasov/get-tag@v2.1
+
+      - name: Publish
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: pwsh
+        run: |
+          dotnet pack TesoroRgb.Core/TesoroRgb.Core.csproj -c Release -p:Version=$env:GIT_TAG_NAME -p:PackageVersion=$env:GIT_TAG_NAME
+          dotnet nuget push "*.nupkg" -k $env:NUGET_API_KEY
