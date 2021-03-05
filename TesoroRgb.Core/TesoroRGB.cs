@@ -5,7 +5,7 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TesoroRGB
+namespace TesoroRgb.Core
 {
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "FalsePositive")]

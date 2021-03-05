@@ -3,14 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31005.135
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TesoroRGB", "TesoroRGB\TesoroRGB.csproj", "{7A5BBA63-D5BB-4160-AEAC-F1CFF2BA0938}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{117C710A-1BE4-4BC1-86A1-C2C93BE5663E}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TesoroRGB.Cli", "TesoroRGB.Cli\TesoroRGB.Cli.csproj", "{F5B222B6-8E96-4CF7-B32F-E196B66BD832}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TesoroRGB.Cli", "TesoroRGB.Cli\TesoroRGB.Cli.csproj", "{F5B222B6-8E96-4CF7-B32F-E196B66BD832}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TesoroRgb.Core", "TesoroRgb.Core\TesoroRgb.Core.csproj", "{F10F3423-F4E0-4F8F-8141-7E16F01E21D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,14 +18,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7A5BBA63-D5BB-4160-AEAC-F1CFF2BA0938}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7A5BBA63-D5BB-4160-AEAC-F1CFF2BA0938}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7A5BBA63-D5BB-4160-AEAC-F1CFF2BA0938}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7A5BBA63-D5BB-4160-AEAC-F1CFF2BA0938}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F5B222B6-8E96-4CF7-B32F-E196B66BD832}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F5B222B6-8E96-4CF7-B32F-E196B66BD832}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F5B222B6-8E96-4CF7-B32F-E196B66BD832}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F5B222B6-8E96-4CF7-B32F-E196B66BD832}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F10F3423-F4E0-4F8F-8141-7E16F01E21D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F10F3423-F4E0-4F8F-8141-7E16F01E21D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F10F3423-F4E0-4F8F-8141-7E16F01E21D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F10F3423-F4E0-4F8F-8141-7E16F01E21D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
